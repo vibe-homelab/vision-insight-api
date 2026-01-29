@@ -50,24 +50,23 @@ class DiffusionWorker(BaseWorker):
         try:
             print(f"[*] Loading FLUX model: {self.model_path}...")
 
-            # Determine model type and quantization
+            # Determine model type and quantization from config
             model_type = "schnell" if "schnell" in self.model_path.lower() else "dev"
-            num_bits = 4 if "4bit" in self.model_path.lower() else 8
+            num_bits = 4 if "4bit" in self.model_path.lower() else None
 
-            # Create model config
-            model_config = ModelConfig.from_name(
-                model_name=model_type,
-                base_model=model_type,
-            )
+            # Create model config for the base model type
+            model_config = ModelConfig.from_name(model_name=model_type)
 
-            # Initialize Flux1
+            # Initialize Flux1 with quantization
+            # mflux will automatically download and quantize the model
+            print(f"[*] Initializing FLUX.1-{model_type} with {num_bits or 'no'}-bit quantization...")
             self.flux = Flux1(
                 model_config=model_config,
                 quantize=num_bits,
             )
 
             self._model_type = model_type
-            print(f"[+] FLUX.1 {model_type} ({num_bits}-bit) loaded on Apple Silicon GPU")
+            print(f"[+] FLUX.1-{model_type} ({num_bits or 'full'}-bit) loaded on Apple Silicon GPU")
 
         except Exception as e:
             print(f"[!] Model loading error: {e}")
