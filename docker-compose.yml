@@ -1,0 +1,66 @@
+# Vision Insight API - Docker Compose
+#
+# Architecture:
+#   - Gateway (Docker): API endpoint, routes requests
+#   - Worker Manager (Host): Manages MLX workers, auto-spawn/offload
+#   - Workers (Host): Actual ML inference with MLX acceleration
+#
+# Prerequisites:
+#   1. Install Worker Manager service: ./scripts/install-service.sh
+#   2. Start Gateway: docker compose up -d
+#
+# The system is now fully automatic:
+#   - API call comes in → Worker Manager spawns worker if needed
+#   - Worker processes request → Returns result
+#   - No activity for 5 min → Worker auto-offloads
+
+services:
+  gateway:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: vision-gateway
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./config.yaml:/app/config.yaml:ro
+      - ./openapi.yaml:/app/openapi.yaml:ro
+    environment:
+      - PYTHONUNBUFFERED=1
+      - PYTHONPATH=/app
+      - WORKER_MANAGER_HOST=host.docker.internal
+      - WORKER_MANAGER_PORT=8100
+      - WORKER_HOST=host.docker.internal
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      worker-manager-check:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/healthz"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    restart: unless-stopped
+
+  # This service checks that Worker Manager is running on host
+  worker-manager-check:
+    image: curlimages/curl:latest
+    command: >
+      sh -c "
+        echo 'Checking Worker Manager on host...' &&
+        for i in 1 2 3 4 5; do
+          if curl -sf http://host.docker.internal:8100/health; then
+            echo 'Worker Manager is running!'
+            exit 0
+          fi
+          echo 'Waiting for Worker Manager... (attempt $$i/5)'
+          sleep 2
+        done
+        echo 'ERROR: Worker Manager not running on host!'
+        echo 'Run: ./scripts/install-service.sh'
+        exit 1
+      "
+    extra_hosts:
+      - "host.docker.internal:host-gateway"

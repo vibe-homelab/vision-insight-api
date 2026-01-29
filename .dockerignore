@@ -1,0 +1,51 @@
+# Virtual environment
+.venv/
+venv/
+env/
+__pycache__/
+*.pyc
+*.pyo
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Git
+.git/
+.gitignore
+
+# Docker
+Dockerfile*
+docker-compose*.yml
+.dockerignore
+
+# Logs and data
+logs/
+*.log
+.pids/
+
+# Scripts (not needed in container)
+scripts/
+
+# Tests
+tests/
+pytest.ini
+.pytest_cache/
+
+# Documentation
+*.md
+docs/
+
+# ML models (too large, mount or download at runtime)
+models/
+*.safetensors
+*.bin
+*.gguf
+
+# Misc
+.DS_Store
+*.egg-info/
+dist/
+build/

@@ -1,0 +1,64 @@
+# Vision Insight API Configuration
+# Optimized for Mac Mini M4 32GB
+
+models:
+  # Vision Language Models (Image → Text)
+  vlm-fast:
+    type: "vlm"
+    path: "mlx-community/moondream2"  # Fast, lightweight VLM
+    hot_reload: true
+    params:
+      max_tokens: 512
+      memory_gb: 1.5  # Estimated memory usage
+
+  vlm-best:
+    type: "vlm"
+    path: "mlx-community/Qwen2.5-VL-7B-Instruct-4bit"  # High quality VLM
+    hot_reload: false
+    params:
+      max_tokens: 1024
+      memory_gb: 4.5  # Estimated memory usage
+
+  # Image Generation Models (Text → Image, Image → Image)
+  image-gen:
+    type: "diffusion"
+    path: "mlx-community/FLUX.1-schnell-4bit-mlx"  # Fast generation
+    hot_reload: false
+    params:
+      default_model: "schnell"
+      quantize: 4
+      memory_gb: 6.0  # Estimated memory usage
+
+# Memory Management
+memory:
+  # Maximum memory to use for models (leave room for system)
+  # M4 32GB → use 24GB for models, keep 8GB for system
+  max_unified_memory_gb: 24
+
+  # Start evicting LRU workers when memory usage exceeds this threshold
+  eviction_threshold_percent: 75
+
+  # Safety margin: always keep this much memory free
+  # Prevents OOM during inference
+  safety_margin_gb: 0.0
+
+# Gateway Configuration
+gateway:
+  host: "0.0.0.0"
+  port: 8000
+  api_key: "default-key-change-me"
+
+# Worker Configuration
+workers:
+  # Port assignments for workers (host mode)
+  ports:
+    vlm-fast: 8001
+    vlm-best: 8002
+    image-gen: 8003
+
+  # Health check settings
+  health_check_interval: 30
+  health_check_timeout: 5
+
+  # Worker startup timeout (model loading can take time)
+  startup_timeout: 120

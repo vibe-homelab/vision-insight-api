@@ -1,0 +1,369 @@
+openapi: 3.0.3
+info:
+  title: Vision Insight API Gateway
+  description: |
+    OpenAI-compatible Gateway for MLX-based Vision and Image Generation models on Apple Silicon.
+
+    ## Use Cases
+    1. **Text → Image**: Generate images from text prompts (FLUX)
+    2. **(Text, Image) → Image**: Edit/transform existing images (img2img)
+    3. **(Text, Image) → Text**: Analyze images with VLM (caption, OCR, etc.)
+
+  version: 2.0.0
+
+servers:
+  - url: http://localhost:8000
+    description: Local development server
+
+paths:
+  /v1/images/generations:
+    post:
+      summary: Text to Image Generation
+      description: |
+        Generate images from text prompts using FLUX models.
+        Supports both 'schnell' (fast, 4 steps) and 'dev' (quality, 20 steps) models.
+      tags:
+        - Image Generation
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ImageGenerationRequest'
+            example:
+              prompt: "a cat astronaut floating in space, digital art"
+              size: "1024x1024"
+              model: "schnell"
+              steps: 4
+      responses:
+        '200':
+          description: Generated image(s)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ImageGenerationResponse'
+
+  /v1/images/edits:
+    post:
+      summary: Image to Image Editing
+      description: |
+        Transform an existing image based on a text prompt (img2img).
+        The 'strength' parameter controls how much the image changes:
+        - 0.0 = keep original
+        - 1.0 = full regeneration
+      tags:
+        - Image Generation
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ImageEditRequest'
+            example:
+              prompt: "make it a sunset scene"
+              image: "<base64 encoded image>"
+              strength: 0.7
+              model: "schnell"
+      responses:
+        '200':
+          description: Edited image
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ImageGenerationResponse'
+
+  /v1/chat/completions:
+    post:
+      summary: Multimodal Chat Completion
+      description: |
+        OpenAI-compatible chat completion with vision support.
+        Send images as base64-encoded data URLs in the message content.
+      tags:
+        - Vision Language Model
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChatCompletionRequest'
+            example:
+              model: "vlm-best"
+              messages:
+                - role: "user"
+                  content:
+                    - type: "text"
+                      text: "What's in this image?"
+                    - type: "image_url"
+                      image_url:
+                        url: "data:image/png;base64,..."
+      responses:
+        '200':
+          description: Chat completion response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChatCompletionResponse'
+
+  /v1/vision/analyze:
+    post:
+      summary: Structured Image Analysis
+      description: |
+        Analyze images with predefined tasks or custom prompts.
+        Available tasks: caption, ocr, describe, analyze, objects, custom
+      tags:
+        - Vision Language Model
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VisionAnalyzeRequest'
+            example:
+              image: "<base64 encoded image>"
+              task: "caption"
+      responses:
+        '200':
+          description: Analysis result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VisionAnalyzeResponse'
+
+  /v1/vision/tasks:
+    get:
+      summary: List Vision Tasks
+      description: Get list of available vision analysis tasks.
+      tags:
+        - Vision Language Model
+      responses:
+        '200':
+          description: List of tasks
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  tasks:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                        description:
+                          type: string
+
+  /v1/models:
+    get:
+      summary: List Models
+      description: Get list of available models.
+      tags:
+        - Models
+      responses:
+        '200':
+          description: List of models
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  object:
+                    type: string
+                    example: "list"
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                        object:
+                          type: string
+                        created:
+                          type: integer
+                        owned_by:
+                          type: string
+
+  /healthz:
+    get:
+      summary: Health Check
+      tags:
+        - System
+      responses:
+        '200':
+          description: Service is healthy
+
+components:
+  schemas:
+    ImageGenerationRequest:
+      type: object
+      required:
+        - prompt
+      properties:
+        prompt:
+          type: string
+          description: Text prompt for image generation
+        n:
+          type: integer
+          default: 1
+          description: Number of images to generate
+        size:
+          type: string
+          default: "1024x1024"
+          description: Image size (e.g., "1024x1024", "512x512")
+        model:
+          type: string
+          default: "schnell"
+          enum: ["schnell", "dev"]
+          description: Model variant (schnell=fast, dev=quality)
+        steps:
+          type: integer
+          description: Number of inference steps (default 4 for schnell, 20 for dev)
+
+    ImageEditRequest:
+      type: object
+      required:
+        - prompt
+        - image
+      properties:
+        prompt:
+          type: string
+          description: Text prompt describing the desired edit
+        image:
+          type: string
+          description: Base64 encoded input image
+        strength:
+          type: number
+          default: 0.7
+          minimum: 0.0
+          maximum: 1.0
+          description: How much to change the image (0=keep original, 1=full regeneration)
+        size:
+          type: string
+          description: Output size (default keeps original)
+        model:
+          type: string
+          default: "schnell"
+          enum: ["schnell", "dev"]
+        steps:
+          type: integer
+          description: Number of inference steps
+
+    ImageGenerationResponse:
+      type: object
+      properties:
+        created:
+          type: integer
+        data:
+          type: array
+          items:
+            type: object
+            properties:
+              b64_json:
+                type: string
+                description: Base64 encoded image
+              revised_prompt:
+                type: string
+        usage:
+          type: object
+          properties:
+            latency:
+              type: number
+
+    ChatCompletionRequest:
+      type: object
+      required:
+        - messages
+      properties:
+        model:
+          type: string
+          default: "vlm-fast"
+        messages:
+          type: array
+          items:
+            type: object
+            properties:
+              role:
+                type: string
+                enum: ["system", "user", "assistant"]
+              content:
+                oneOf:
+                  - type: string
+                  - type: array
+                    items:
+                      type: object
+        stream:
+          type: boolean
+          default: false
+        max_tokens:
+          type: integer
+          default: 512
+
+    ChatCompletionResponse:
+      type: object
+      properties:
+        id:
+          type: string
+        object:
+          type: string
+        created:
+          type: integer
+        model:
+          type: string
+        choices:
+          type: array
+          items:
+            type: object
+            properties:
+              index:
+                type: integer
+              message:
+                type: object
+                properties:
+                  role:
+                    type: string
+                  content:
+                    type: string
+              finish_reason:
+                type: string
+        usage:
+          type: object
+
+    VisionAnalyzeRequest:
+      type: object
+      required:
+        - image
+      properties:
+        image:
+          type: string
+          description: Base64 encoded image
+        task:
+          type: string
+          default: "caption"
+          enum: ["caption", "ocr", "describe", "analyze", "objects", "custom"]
+          description: Analysis task type
+        prompt:
+          type: string
+          description: Custom prompt (required when task is 'custom')
+        max_tokens:
+          type: integer
+          default: 512
+
+    VisionAnalyzeResponse:
+      type: object
+      properties:
+        task:
+          type: string
+        result:
+          type: string
+        created:
+          type: integer
+        model:
+          type: string
+        usage:
+          type: object
+          properties:
+            latency:
+              type: number
+            prompt_used:
+              type: string

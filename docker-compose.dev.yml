@@ -1,0 +1,23 @@
+# Development override for docker-compose
+# Usage: docker compose -f docker-compose.yml -f docker-compose.dev.yml up
+
+services:
+  gateway:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    volumes:
+      # Mount source code for hot reload
+      - ./src:/app/src:ro
+      - ./config.yaml:/app/config.yaml:ro
+      - ./openapi.yaml:/app/openapi.yaml:ro
+    environment:
+      - PYTHONUNBUFFERED=1
+      - PYTHONPATH=/app
+      - DEBUG=1
+    command: >
+      python -m uvicorn src.gateway.main:app
+      --host 0.0.0.0
+      --port 8000
+      --reload
+      --reload-dir /app/src

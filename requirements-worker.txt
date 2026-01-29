@@ -1,0 +1,22 @@
+# Worker Dependencies (Apple Silicon Host)
+# Includes MLX acceleration libraries
+
+# Core
+fastapi>=0.109.0
+uvicorn[standard]>=0.27.0
+pydantic>=2.0.0
+httpx>=0.26.0
+PyYAML>=6.0
+Pillow>=10.0.0
+
+# MLX Framework (Apple Silicon)
+mlx>=0.5.0
+
+# Vision Language Models
+mlx-vlm>=0.1.0
+
+# Image Generation (FLUX)
+mflux>=0.4.0
+
+# Hugging Face
+huggingface-hub>=0.20.0
