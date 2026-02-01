@@ -42,6 +42,8 @@ from src.core.memory import (
 IDLE_TIMEOUT_SECONDS = int(os.getenv("IDLE_TIMEOUT", "300"))  # 5 minutes default
 HEALTH_CHECK_INTERVAL = 30  # seconds
 MANAGER_PORT = int(os.getenv("MANAGER_PORT", "8100"))
+# Restart worker after N requests to prevent semaphore leak accumulation
+MAX_REQUESTS_BEFORE_RESTART = int(os.getenv("MAX_REQUESTS", "50"))
 
 
 @dataclass
@@ -240,7 +242,7 @@ class WorkerManager:
 
     async def _monitor_idle_workers(self):
         """Background task to offload idle workers."""
-        print(f"[*] Idle monitor started (timeout: {IDLE_TIMEOUT_SECONDS}s)")
+        print(f"[*] Idle monitor started (timeout: {IDLE_TIMEOUT_SECONDS}s, max_requests: {MAX_REQUESTS_BEFORE_RESTART})")
 
         while self._running:
             try:
@@ -260,6 +262,12 @@ class WorkerManager:
                     idle_time = now - worker.last_used
                     if idle_time > IDLE_TIMEOUT_SECONDS:
                         print(f"[*] {alias} idle for {idle_time:.0f}s, offloading...")
+                        to_stop.append(alias)
+                        continue
+
+                    # Check request count (prevent semaphore leak accumulation)
+                    if worker.request_count >= MAX_REQUESTS_BEFORE_RESTART:
+                        print(f"[*] {alias} reached {worker.request_count} requests, recycling to prevent resource leaks...")
                         to_stop.append(alias)
 
                 for alias in to_stop:
@@ -305,6 +313,7 @@ class WorkerManager:
             },
             "config": {
                 "idle_timeout_seconds": IDLE_TIMEOUT_SECONDS,
+                "max_requests_before_restart": MAX_REQUESTS_BEFORE_RESTART,
                 "safety_margin_gb": config.memory.safety_margin_gb,
             }
         }
