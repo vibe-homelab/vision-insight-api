@@ -307,8 +307,11 @@ class WorkerManager:
             },
             "memory": {
                 "total_gb": memory.total,
+                "used_gb": memory.used,
                 "available_gb": memory.available,
                 "used_percent": memory.usage_percent,
+                # Backward/forward compatibility: some clients use a different key.
+                "usage_percent": memory.usage_percent,
                 "models_loaded_gb": sum(w.memory_gb for w in self.workers.values()),
             },
             "config": {

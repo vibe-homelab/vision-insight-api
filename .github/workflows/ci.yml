@@ -1,0 +1,46 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  gateway-smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      - name: Install gateway deps
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Compile
+        run: python -m compileall -q src
+
+      - name: Import check
+        run: python -c "from src.gateway.main import app; print(app.title)"
+
+      - name: API smoke (no workers)
+        run: |
+          python - <<'PY'
+          from fastapi.testclient import TestClient
+          from src.gateway.main import app
+
+          c = TestClient(app)
+          assert c.get("/healthz").status_code == 200
+          assert c.get("/v1/models").status_code == 200
+          PY
+
+  docker-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build Docker image
+        run: docker build -t vision-insight-api:ci .

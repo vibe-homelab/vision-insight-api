@@ -249,6 +249,14 @@ make uninstall    # 전체 제거
 | `IDLE_TIMEOUT` | 300 | 워커 자동 종료 시간 (초) |
 | `MANAGER_PORT` | 8100 | Worker Manager 포트 |
 
+### 인증 (선택)
+
+`config.yaml`의 `gateway.api_key`를 **비워두거나(default placeholder 포함)** 그대로 두면 인증 없이 동작합니다.
+`gateway.api_key`를 **임의의 값(권장: 충분히 긴 랜덤 문자열)**으로 설정하면 `/v1/*` 요청에 대해 다음 헤더 중 하나가 필요합니다.
+
+- `Authorization: Bearer <api_key>`
+- `X-API-Key: <api_key>`
+
 ---
 
 ## 라이선스

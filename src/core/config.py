@@ -2,6 +2,7 @@
 Configuration loader for Vision Insight API.
 """
 
+import os
 import yaml
 from pathlib import Path
 from pydantic import BaseModel, Field
@@ -69,7 +70,15 @@ def load_config(config_path: str = "config.yaml") -> AppConfig:
     with open(path, "r") as f:
         data = yaml.safe_load(f)
 
-    return AppConfig(**data)
+    cfg = AppConfig(**data)
+
+    # Optional environment overrides (useful for container/runtime configs).
+    if os.getenv("GATEWAY_PORT"):
+        cfg.gateway.port = int(os.environ["GATEWAY_PORT"])
+    if os.getenv("GATEWAY_API_KEY"):
+        cfg.gateway.api_key = os.environ["GATEWAY_API_KEY"]
+
+    return cfg
 
 
 # Global config instance

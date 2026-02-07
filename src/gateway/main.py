@@ -11,15 +11,60 @@ from src.core.config import config
 from src.core.supervisor import supervisor
 
 
+_DEFAULT_API_KEYS = {"default-key", "default-key-change-me"}
+
+
+def _get_api_key() -> str:
+    return (config.gateway.api_key or "").strip()
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Startup logic
+    api_key = _get_api_key()
+    if api_key in _DEFAULT_API_KEYS:
+        # We intentionally treat the default placeholder as "auth disabled"
+        # to avoid breaking local/dev setups without explicit configuration.
+        print("[!] gateway.api_key is set to a default placeholder; API auth is disabled.")
+        print("[!] Set gateway.api_key in config.yaml to enable Authorization checks.")
     yield
     # Shutdown logic
     await supervisor.shutdown()
 
 
 app = FastAPI(title="Vision Insight API Gateway", lifespan=lifespan)
+
+
+@app.middleware("http")
+async def api_key_auth_middleware(request: Request, call_next):
+    """Optional API key auth for all /v1/* endpoints.
+
+    Enable by setting gateway.api_key in config.yaml to a non-default, non-empty value.
+    Clients may send either:
+    - Authorization: Bearer <api_key>
+    - X-API-Key: <api_key>
+    """
+    path = request.url.path
+
+    # Allow non-API routes (health/docs/etc) without auth.
+    if not path.startswith("/v1/"):
+        return await call_next(request)
+
+    api_key = _get_api_key()
+    if not api_key or api_key in _DEFAULT_API_KEYS:
+        return await call_next(request)
+
+    auth = request.headers.get("authorization", "")
+    provided = ""
+    if auth.lower().startswith("bearer "):
+        provided = auth.split(" ", 1)[1].strip()
+    if not provided:
+        provided = (request.headers.get("x-api-key", "") or "").strip()
+
+    if provided != api_key:
+        return JSONResponse(status_code=401, content={"detail": "Unauthorized"})
+
+    return await call_next(request)
 
 
 class ChatCompletionRequest(BaseModel):
@@ -35,6 +80,8 @@ class ImageGenerationRequest(BaseModel):
     size: str = "1024x1024"
     model: str = "schnell"  # schnell (fast) or dev (quality)
     steps: Optional[int] = None
+    seed: Optional[int] = None
+    guidance: float = 3.5
 
 
 class ImageEditRequest(BaseModel):
@@ -45,6 +92,8 @@ class ImageEditRequest(BaseModel):
     size: Optional[str] = None
     model: str = "schnell"
     steps: Optional[int] = None
+    seed: Optional[int] = None
+    guidance: float = 3.5
 
 
 class VisionAnalyzeRequest(BaseModel):
@@ -148,6 +197,8 @@ async def generate_images(request: ImageGenerationRequest):
                     "size": request.size,
                     "model": request.model,
                     "steps": request.steps,
+                    "seed": request.seed,
+                    "guidance": request.guidance,
                 },
                 timeout=300.0,  # 5 min timeout for image gen
             )
@@ -200,6 +251,8 @@ async def edit_images(request: ImageEditRequest):
                     "size": request.size,
                     "model": request.model,
                     "steps": request.steps,
+                    "seed": request.seed,
+                    "guidance": request.guidance,
                 },
                 timeout=300.0,
             )
