@@ -16,6 +16,14 @@ Mac Mini M4 (Apple Silicon)에서 MLX 가속을 활용한 로컬 AI API 서버�
 | (Text, Image) → Text | `POST /v1/chat/completions` | 이미지 분석 (OpenAI 호환) |
 | Image → Text | `POST /v1/vision/analyze` | 구조화된 이미지 분석 |
 
+## 포트/헬스체크
+
+| 구성요소 | 기본 포트 | 헬스 |
+|---|---:|---|
+| Gateway (Docker) | `8000` | `GET /healthz` |
+| Worker Manager (Host) | `8100` | `GET /health` |
+| Workers (Host) | `8001-8003` | `GET /health` |
+
 ## 아키텍처
 
 ```
@@ -45,13 +53,29 @@ Mac Mini M4 (Apple Silicon)에서 MLX 가속을 활용한 로컬 AI API 서버�
 └─────────────────────────────────────────────────────────┘
 ```
 
-## 빠른 시작
+## 빠른 시작 (권장)
+
+> 주의: MLX 워커는 **Host(macOS)**에서 실행되어야 하므로, Gateway 컨테이너만으로는 동작하지 않습니다.
+
+### 0) 준비물
+
+- Apple Silicon macOS (MLX 가속용)
+- Docker Desktop (Gateway 실행용)
+- Python 3.11+ (Worker Manager/Workers 실행용)
 
 ### 설치
 
 ```bash
 # 전체 설치 (서비스 등록 + Docker 시작)
 make install
+```
+
+정상 기동 확인:
+
+```bash
+curl http://localhost:8100/health   # Worker Manager
+curl http://localhost:8000/healthz  # Gateway
+curl http://localhost:8000/v1/models | python3 -m json.tool
 ```
 
 ### 사용
@@ -64,6 +88,23 @@ curl -X POST http://localhost:8000/v1/images/generations \
 
 # 시스템 상태
 curl http://localhost:8000/v1/system/status
+```
+
+## Full Stack (Dashboard + Gateways)
+
+대시보드까지 포함해 한 번에 실행하려면 `vibe-homelab.github.io`의 스택 compose를 사용하세요:
+
+- Stack guide: `vibe-homelab.github.io/stack/README.md`
+- Compose: `vibe-homelab.github.io/stack/docker-compose.yml`
+
+## Docker 이미지 (GHCR)
+
+Gateway 컨테이너 이미지는 GHCR로 배포됩니다.
+
+> 이 이미지는 **Gateway만 포함**합니다. Worker Manager/Workers는 Host에서 실행해야 합니다.
+
+```bash
+docker pull ghcr.io/vibe-homelab/vision-insight-api:latest
 ```
 
 ---
@@ -248,6 +289,8 @@ make uninstall    # 전체 제거
 |------|--------|------|
 | `IDLE_TIMEOUT` | 300 | 워커 자동 종료 시간 (초) |
 | `MANAGER_PORT` | 8100 | Worker Manager 포트 |
+| `GATEWAY_PORT` | 8000 | Gateway 포트 |
+| `GATEWAY_API_KEY` | (placeholder) | Gateway `/v1/*` 인증 키 (옵션) |
 
 ### 인증 (선택)
 
@@ -258,6 +301,22 @@ make uninstall    # 전체 제거
 - `X-API-Key: <api_key>`
 
 ---
+
+## Troubleshooting
+
+| 증상 | 원인 | 해결 |
+|---|---|---|
+| `make install` 중 Worker Manager 헬스체크 실패 | launchd 서비스 미기동/포트 충돌 | `tail -f logs/worker-manager.error.log` 및 `curl http://localhost:8100/health` |
+| 첫 요청이 매우 느림 | 모델 다운로드/초기 로딩 | 워커 로그 확인(`make logs-manager`, `make logs-workers`) |
+| OOM/재부팅/추론 중 죽음 | 메모리 여유 부족 | `config.yaml`의 `memory.safety_margin_gb`를 2~4로 올리고, 동시에 띄우는 모델 수를 줄이기 |
+| `host.docker.internal` 연결 실패(리눅스 등) | Docker/OS 차이 | `WORKER_MANAGER_HOST`를 실제 호스트 IP로 설정하고 compose/설정 파일도 동일하게 맞추기 |
+
+## 로컬 스모크 테스트
+
+```bash
+./scripts/test-local.sh
+./scripts/test-image-gen.sh
+```
 
 ## 라이선스
 
