@@ -1,8 +1,9 @@
 """
-Memory Manager for Apple Silicon Unified Memory.
-Monitors system memory and manages model allocation.
+Memory Manager for model allocation.
+Supports Apple Silicon unified memory (macOS) and NVIDIA GPU memory (Linux).
 """
 
+import platform
 import subprocess
 import re
 from dataclasses import dataclass
@@ -24,22 +25,28 @@ class MemoryStatus:
         return (self.used / self.total) * 100 if self.total > 0 else 0
 
 
+IS_LINUX = platform.system() == "Linux"
+IS_MACOS = platform.system() == "Darwin"
+
 # Estimated memory usage per model (in GB)
-# These are approximate values for 4-bit quantized models
 MODEL_MEMORY_REQUIREMENTS: Dict[str, float] = {
-    # VLM models
+    # MLX VLM models (macOS)
     "mlx-community/moondream2": 1.5,
     "mlx-community/Qwen2.5-VL-3B-Instruct-4bit": 2.5,
     "mlx-community/Qwen2.5-VL-7B-Instruct-4bit": 4.5,
     "mlx-community/Qwen2.5-VL-14B-Instruct-4bit": 8.0,
 
-    # Image generation models
+    # MLX Image generation models (macOS)
     "mlx-community/FLUX.1-schnell-4bit-mlx": 6.0,
     "mlx-community/FLUX.1-dev-4bit-mlx": 12.0,
+
+    # CUDA Image generation models (Linux/NVIDIA)
+    "Qwen/Qwen-Image-2512": 20.0,
 
     # Fallback estimates by type
     "_default_vlm": 3.0,
     "_default_diffusion": 8.0,
+    "_default_cuda_diffusion": 20.0,
 }
 
 
@@ -66,11 +73,71 @@ def get_model_memory_requirement(model_path: str, model_type: str = "vlm") -> fl
     return MODEL_MEMORY_REQUIREMENTS["_default_vlm"]
 
 
+def _get_linux_memory_status() -> MemoryStatus:
+    """Get memory status on Linux using /proc/meminfo."""
+    try:
+        with open("/proc/meminfo") as f:
+            meminfo = {}
+            for line in f:
+                parts = line.split(":")
+                if len(parts) == 2:
+                    key = parts[0].strip()
+                    val = parts[1].strip().split()[0]  # kB value
+                    meminfo[key] = int(val) / (1024 * 1024)  # Convert to GB
+
+        total = meminfo.get("MemTotal", 32.0)
+        available = meminfo.get("MemAvailable", total * 0.5)
+        used = total - available
+        buffers = meminfo.get("Buffers", 0)
+        cached = meminfo.get("Cached", 0)
+
+        return MemoryStatus(
+            total=round(total, 2),
+            used=round(used, 2),
+            available=round(available, 2),
+            app_memory=round(used - buffers - cached, 2),
+            wired=0.0,
+            compressed=0.0,
+        )
+    except Exception:
+        return _get_fallback_memory_status()
+
+
+def _get_nvidia_gpu_memory() -> list[dict]:
+    """Get NVIDIA GPU memory info via nvidia-smi."""
+    try:
+        result = subprocess.run(
+            ["nvidia-smi", "--query-gpu=index,memory.total,memory.used,memory.free",
+             "--format=csv,noheader,nounits"],
+            capture_output=True, text=True, timeout=5,
+        )
+        if result.returncode != 0:
+            return []
+
+        gpus = []
+        for line in result.stdout.strip().split("\n"):
+            parts = [x.strip() for x in line.split(",")]
+            if len(parts) == 4:
+                gpus.append({
+                    "index": int(parts[0]),
+                    "total_mb": float(parts[1]),
+                    "used_mb": float(parts[2]),
+                    "free_mb": float(parts[3]),
+                })
+        return gpus
+    except Exception:
+        return []
+
+
 def get_memory_status() -> MemoryStatus:
     """
-    Get current memory status on macOS using vm_stat.
+    Get current memory status.
+    Uses /proc/meminfo on Linux, vm_stat on macOS.
     Returns memory values in GB.
     """
+    if IS_LINUX:
+        return _get_linux_memory_status()
+
     try:
         # Get vm_stat output
         result = subprocess.run(

@@ -1,45 +1,64 @@
 # Vision Insight API Configuration
-# Optimized for Mac Mini M4 32GB
+#
+# Platform support:
+#   macOS (Apple Silicon) - MLX backend: moondream2, Qwen2.5-VL, FLUX
+#   Linux (NVIDIA CUDA)   - PyTorch backend: Qwen-Image-2512
+#
+# Set VISION_PLATFORM=cuda or VISION_PLATFORM=mlx to override auto-detection.
 
 models:
+  # ── MLX Models (macOS Apple Silicon) ──────────────────────────
+
   # Vision Language Models (Image → Text)
   vlm-fast:
     type: "vlm"
-    path: "mlx-community/moondream2"  # Fast, lightweight VLM
+    path: "mlx-community/moondream2"
     hot_reload: true
+    backend: "mlx"
     params:
       max_tokens: 512
-      memory_gb: 1.5  # Estimated memory usage
+      memory_gb: 1.5
 
   vlm-best:
     type: "vlm"
-    path: "mlx-community/Qwen2.5-VL-7B-Instruct-4bit"  # High quality VLM
+    path: "mlx-community/Qwen2.5-VL-7B-Instruct-4bit"
     hot_reload: false
+    backend: "mlx"
     params:
       max_tokens: 1024
-      memory_gb: 4.5  # Estimated memory usage
+      memory_gb: 4.5
 
-  # Image Generation Models (Text → Image, Image → Image)
+  # Image Generation (MLX FLUX)
   image-gen:
     type: "diffusion"
-    path: "mlx-community/FLUX.1-schnell-4bit-mlx"  # Fast generation
+    path: "mlx-community/FLUX.1-schnell-4bit-mlx"
     hot_reload: false
+    backend: "mlx"
     params:
       default_model: "schnell"
       quantize: 4
-      memory_gb: 6.0  # Estimated memory usage
+      memory_gb: 6.0
+
+  # ── CUDA Models (Linux NVIDIA GPU) ───────────────────────────
+
+  # Image Generation (Qwen-Image-2512 via diffusers)
+  image-gen-cuda:
+    type: "cuda_diffusion"
+    path: "Qwen/Qwen-Image-2512"
+    hot_reload: false
+    backend: "cuda"
+    params:
+      torch_dtype: "bfloat16"
+      gpu_memory_fraction: 0.92
+      num_inference_steps: 50
+      true_cfg_scale: 4.0
+      max_image_edge: 2048
+      memory_gb: 20.0
 
 # Memory Management
 memory:
-  # Maximum memory to use for models (leave room for system)
-  # M4 32GB → use 24GB for models, keep 8GB for system
   max_unified_memory_gb: 24
-
-  # Start evicting LRU workers when memory usage exceeds this threshold
   eviction_threshold_percent: 75
-
-  # Safety margin: always keep this much memory free
-  # Prevents OOM during inference
   safety_margin_gb: 0.0
 
 # Gateway Configuration
@@ -50,15 +69,12 @@ gateway:
 
 # Worker Configuration
 workers:
-  # Port assignments for workers (host mode)
   ports:
     vlm-fast: 8001
     vlm-best: 8002
     image-gen: 8003
+    image-gen-cuda: 8003
 
-  # Health check settings
   health_check_interval: 30
   health_check_timeout: 5
-
-  # Worker startup timeout (model loading can take time)
-  startup_timeout: 120
+  startup_timeout: 300  # CUDA models take longer to load

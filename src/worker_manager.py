@@ -148,8 +148,13 @@ class WorkerManager:
             print(f"[*] Spawning {alias} on port {port} (memory: {memory_gb:.1f}GB)")
 
             # Start worker process
+            worker_module = model_cfg.type
+            # Map cuda_ prefixed types to cuda worker modules
+            if worker_module.startswith("cuda_"):
+                worker_module = f"cuda_{worker_module[5:]}"
+
             cmd = [
-                sys.executable, "-m", f"src.workers.{model_cfg.type}_worker",
+                sys.executable, "-m", f"src.workers.{worker_module}_worker",
                 "--alias", alias,
                 "--model_path", model_cfg.path,
                 "--port", str(port),
@@ -158,10 +163,19 @@ class WorkerManager:
             with open(log_file, "a") as log:
                 log.write(f"\n=== Starting {alias} at {time.ctime()} ===\n")
 
+            # Build environment - pass through CUDA_VISIBLE_DEVICES if set
+            worker_env = {**os.environ, "PYTHONPATH": str(self.project_root)}
+            if hasattr(model_cfg, 'backend') and model_cfg.backend == "cuda":
+                # Propagate GPU-related env vars for CUDA workers
+                for key in ("CUDA_VISIBLE_DEVICES", "GPU_MEMORY_FRACTION",
+                            "TORCH_DTYPE", "LOCAL_FILES_ONLY"):
+                    if key in os.environ:
+                        worker_env[key] = os.environ[key]
+
             process = subprocess.Popen(
                 cmd,
                 cwd=str(self.project_root),
-                env={**os.environ, "PYTHONPATH": str(self.project_root)},
+                env=worker_env,
                 stdout=open(log_file, "a"),
                 stderr=subprocess.STDOUT,
                 preexec_fn=os.setsid,

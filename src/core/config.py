@@ -11,9 +11,10 @@ from typing import Dict, Optional
 
 class ModelConfig(BaseModel):
     """Configuration for a single model."""
-    type: str  # "vlm" or "diffusion"
+    type: str  # "vlm", "diffusion", "cuda_diffusion"
     path: str  # HuggingFace model path
     hot_reload: bool = False
+    backend: str = "mlx"  # "mlx" or "cuda"
     params: Dict = Field(default_factory=dict)
 
 
