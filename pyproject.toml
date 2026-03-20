@@ -1,21 +1,21 @@
 [project]
 name = "vision-insight-api"
-version = "0.1.0"
+version = "0.2.0"
 description = "Self-hosted Vision AI Gateway for Apple Silicon"
 readme = "README.md"
 requires-python = ">=3.11,<3.13"
 dependencies = [
-    "fastapi>=0.110.0",
+    "fastapi>=0.115.0",
     "uvicorn>=0.27.0",
     "pydantic>=2.6.0",
-    "mlx>=0.10.0",
-    "mlx-vlm>=0.0.10",
-    "mlx-lm>=0.0.10",
-    "moondream>=0.0.4",
-    "mflux>=0.12.0",
-    "pillow>=10.2.0",
-    "httpx>=0.26.0",
-    "PyYAML>=6.0.1",
+    "mlx>=0.24.0",
+    "mlx-vlm>=0.3.4",
+    "mlx-lm>=0.22.0",
+    "mflux>=0.16.0",
+    "pillow>=10.4.0",
+    "httpx>=0.27.0",
+    "PyYAML>=6.0.2",
+    "huggingface-hub>=0.28.0",
 ]
 
 [build-system]
