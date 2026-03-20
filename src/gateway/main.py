@@ -34,6 +34,25 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="Vision Insight API Gateway", lifespan=lifespan)
 
+import logging
+import uuid
+
+logger = logging.getLogger(__name__)
+
+
+@app.middleware("http")
+async def request_logging_middleware(request: Request, call_next):
+    request_id = uuid.uuid4().hex[:8]
+    start = time.monotonic()
+    response = await call_next(request)
+    duration_ms = round((time.monotonic() - start) * 1000, 1)
+    logger.info(
+        "%s %s %s %sms [%s]",
+        request.method, request.url.path, response.status_code, duration_ms, request_id
+    )
+    response.headers["X-Request-ID"] = request_id
+    return response
+
 
 @app.middleware("http")
 async def api_key_auth_middleware(request: Request, call_next):
