@@ -32,22 +32,15 @@ class MemoryConfig(BaseModel):
     safety_margin_gb: float = 4.0
 
 
-class WorkerPortsConfig(BaseModel):
-    """Worker port assignments."""
-    vlm_fast: int = Field(default=8001, alias="vlm-fast")
-    vlm_best: int = Field(default=8002, alias="vlm-best")
-    image_gen: int = Field(default=8003, alias="image-gen")
-
-    class Config:
-        populate_by_name = True
-
-
 class WorkersConfig(BaseModel):
     """Worker configuration."""
     ports: Dict[str, int] = Field(default_factory=lambda: {
         "vlm-fast": 8001,
         "vlm-best": 8002,
         "image-gen": 8003,
+        "vlm-thinking": 8004,
+        "vlm-gemma": 8005,
+        "image-gen-cuda": 8003,
     })
     health_check_interval: int = 30
     health_check_timeout: int = 5

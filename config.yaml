@@ -42,7 +42,7 @@ models:
   # Google Gemma 3 — multilingual vision, 140+ languages (2026-03)
   vlm-gemma:
     type: "vlm"
-    path: "mlx-community/gemma-3-12b-it-4bit"
+    path: "mlx-community/gemma-3-12b-it-qat-4bit"
     hot_reload: false
     backend: "mlx"
     params:

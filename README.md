@@ -22,7 +22,7 @@ Mac Mini M4 (Apple Silicon)에서 MLX 가속을 활용한 로컬 AI API 서버�
 |---|---:|---|
 | Gateway (Docker) | `8000` | `GET /healthz` |
 | Worker Manager (Host) | `8100` | `GET /health` |
-| Workers (Host) | `8001-8003` | `GET /health` |
+| Workers (Host) | `8001-8005` | `GET /health` |
 
 ## 아키텍처
 
@@ -47,7 +47,8 @@ Mac Mini M4 (Apple Silicon)에서 MLX 가속을 활용한 로컬 AI API 서버�
 │     ┌──────────┐  ┌──────────┐  ┌──────────┐           │
 │     │ vlm-fast │  │ vlm-best │  │image-gen │           │
 │     │ :8001    │  │ :8002    │  │ :8003    │           │
-│     │Moondream │  │Qwen2.5-VL│  │  FLUX    │           │
+│     │Qwen3-VL │  │Qwen3-VL │  │  FLUX    │           │
+│     │  4B     │  │  8B     │  │          │           │
 │     └──────────┘  └──────────┘  └──────────┘           │
 │              MLX / Metal Acceleration                   │
 └─────────────────────────────────────────────────────────┘
@@ -261,8 +262,10 @@ docker pull ghcr.io/vibe-homelab/vision-insight-api:latest
 
 | 별칭 | 모델 | 용도 | 메모리 |
 |------|------|------|--------|
-| `vlm-fast` | Moondream2 | 빠른 이미지 분석 | ~1.5GB |
-| `vlm-best` | Qwen2.5-VL-7B-4bit | 고품질 이미지 분석 | ~4.5GB |
+| `vlm-fast` | Qwen3-VL-4B-Instruct-4bit | 빠른 이미지 분석 | ~2.5GB |
+| `vlm-best` | Qwen3-VL-8B-Instruct-4bit | 고품질 이미지 분석 | ~5GB |
+| `vlm-thinking` | Qwen3-VL-8B-Thinking-8bit | 체인 오브 싱킹 추론 | ~9GB |
+| `vlm-gemma` | Gemma 3 12B-it-QAT-4bit | 다국어 비전 (140+ 언어) | ~7GB |
 | `image-gen` | FLUX.1-schnell-4bit | 이미지 생성 | ~6GB |
 
 ---

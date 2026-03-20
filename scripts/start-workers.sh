@@ -26,8 +26,10 @@ fi
 
 # Worker configurations
 declare -A WORKERS=(
-    ["vlm-fast"]="8001:mlx-community/moondream2:vlm"
-    ["vlm-best"]="8002:mlx-community/Qwen2.5-VL-7B-Instruct-4bit:vlm"
+    ["vlm-fast"]="8001:mlx-community/Qwen3-VL-4B-Instruct-4bit:vlm"
+    ["vlm-best"]="8002:mlx-community/Qwen3-VL-8B-Instruct-4bit:vlm"
+    ["vlm-thinking"]="8004:mlx-community/Qwen3-VL-8B-Thinking-8bit:vlm"
+    ["vlm-gemma"]="8005:mlx-community/gemma-3-12b-it-qat-4bit:vlm"
     ["image-gen"]="8003:mlx-community/FLUX.1-schnell-4bit-mlx:diffusion"
 )
 

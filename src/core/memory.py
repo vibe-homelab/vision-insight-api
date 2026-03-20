@@ -30,11 +30,11 @@ IS_MACOS = platform.system() == "Darwin"
 
 # Estimated memory usage per model (in GB)
 MODEL_MEMORY_REQUIREMENTS: Dict[str, float] = {
-    # MLX VLM models (macOS)
-    "mlx-community/moondream2": 1.5,
-    "mlx-community/Qwen2.5-VL-3B-Instruct-4bit": 2.5,
-    "mlx-community/Qwen2.5-VL-7B-Instruct-4bit": 4.5,
-    "mlx-community/Qwen2.5-VL-14B-Instruct-4bit": 8.0,
+    # MLX VLM models (macOS) — 2026-03
+    "mlx-community/Qwen3-VL-4B-Instruct-4bit": 2.5,
+    "mlx-community/Qwen3-VL-8B-Instruct-4bit": 5.0,
+    "mlx-community/Qwen3-VL-8B-Thinking-8bit": 9.0,
+    "mlx-community/gemma-3-12b-it-qat-4bit": 7.0,
 
     # MLX Image generation models (macOS)
     "mlx-community/FLUX.1-schnell-4bit-mlx": 6.0,
