@@ -333,7 +333,15 @@ async def list_vision_tasks():
 
 @app.get("/healthz")
 async def health_check():
-    return {"status": "ok", "timestamp": time.time()}
+    try:
+        async with httpx.AsyncClient(timeout=3.0) as client:
+            from src.core.supervisor import WORKER_MANAGER_URL
+            resp = await client.get(f"{WORKER_MANAGER_URL}/health")
+            if resp.status_code == 200:
+                return {"status": "ok", "supervisor": "connected", "timestamp": time.time()}
+    except Exception:
+        pass
+    return {"status": "degraded", "supervisor": "disconnected", "timestamp": time.time()}
 
 
 @app.get("/v1/system/status")

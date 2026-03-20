@@ -26,11 +26,10 @@ fi
 
 # Worker configurations
 declare -A WORKERS=(
-    ["vlm-fast"]="8001:mlx-community/Qwen3-VL-4B-Instruct-4bit:vlm"
-    ["vlm-best"]="8002:mlx-community/Qwen3-VL-8B-Instruct-4bit:vlm"
-    ["vlm-thinking"]="8004:mlx-community/Qwen3-VL-8B-Thinking-8bit:vlm"
+    ["vlm-fast"]="8001:mlx-community/Qwen3.5-4B-MLX-4bit:vlm"
+    ["vlm-best"]="8002:mlx-community/Qwen3.5-9B-MLX-4bit:vlm"
     ["vlm-gemma"]="8005:mlx-community/gemma-3-12b-it-qat-4bit:vlm"
-    ["image-gen"]="8003:mlx-community/FLUX.1-schnell-4bit-mlx:diffusion"
+    ["image-gen"]="8003:themindstudio/flux2-klein-4b-mlx-4bit:diffusion"
 )
 
 start_worker() {

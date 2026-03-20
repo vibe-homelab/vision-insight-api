@@ -74,7 +74,6 @@ class WorkerManager:
             "vlm-fast": 8001,
             "vlm-best": 8002,
             "image-gen": 8003,
-            "vlm-thinking": 8004,
             "vlm-gemma": 8005,
             "image-gen-cuda": 8003,
         }

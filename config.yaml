@@ -1,8 +1,8 @@
 # Vision Insight API Configuration
-# Updated: 2026-03 — Qwen3-VL, Gemma 3, FLUX (M4 Mac Mini 32GB)
+# Updated: 2026-03 — Qwen3.5, Gemma 3, FLUX.2 (M4 Mac Mini 32GB)
 #
 # Platform support:
-#   macOS (Apple Silicon) - MLX backend: Qwen3-VL, Gemma 3, FLUX
+#   macOS (Apple Silicon) - MLX backend: Qwen3.5, Gemma 3, FLUX.2
 #   Linux (NVIDIA CUDA)   - PyTorch backend: Qwen-Image-2512
 #
 # Set VISION_PLATFORM=cuda or VISION_PLATFORM=mlx to override auto-detection.
@@ -13,31 +13,21 @@ models:
   # Vision Language Models (Image → Text)
   vlm-fast:
     type: "vlm"
-    path: "mlx-community/Qwen3-VL-4B-Instruct-4bit"
+    path: "mlx-community/Qwen3.5-4B-MLX-4bit"
     hot_reload: true
     backend: "mlx"
     params:
       max_tokens: 1024
-      memory_gb: 2.5
+      memory_gb: 2.9
 
   vlm-best:
     type: "vlm"
-    path: "mlx-community/Qwen3-VL-8B-Instruct-4bit"
+    path: "mlx-community/Qwen3.5-9B-MLX-4bit"
     hot_reload: false
     backend: "mlx"
     params:
       max_tokens: 2048
-      memory_gb: 5.0
-
-  # Deep visual reasoning with chain-of-thought (2026-03)
-  vlm-thinking:
-    type: "vlm"
-    path: "mlx-community/Qwen3-VL-8B-Thinking-8bit"
-    hot_reload: false
-    backend: "mlx"
-    params:
-      max_tokens: 4096
-      memory_gb: 9.0
+      memory_gb: 6.0
 
   # Google Gemma 3 — multilingual vision, 140+ languages (2026-03)
   vlm-gemma:
@@ -49,16 +39,16 @@ models:
       max_tokens: 2048
       memory_gb: 7.0
 
-  # Image Generation (MLX FLUX)
+  # Image Generation (MLX FLUX.2)
   image-gen:
     type: "diffusion"
-    path: "mlx-community/FLUX.1-schnell-4bit-mlx"
+    path: "themindstudio/flux2-klein-4b-mlx-4bit"
     hot_reload: false
     backend: "mlx"
     params:
-      default_model: "schnell"
+      default_model: "flux2-klein-4b"
       quantize: 4
-      memory_gb: 6.0
+      memory_gb: 4.6
 
   # ── CUDA Models (Linux NVIDIA GPU) ───────────────────────────
 
@@ -93,7 +83,6 @@ workers:
   ports:
     vlm-fast: 8001
     vlm-best: 8002
-    vlm-thinking: 8004
     vlm-gemma: 8005
     image-gen: 8003
     image-gen-cuda: 8003

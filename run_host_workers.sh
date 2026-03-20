@@ -24,12 +24,12 @@ export PYTHONPATH=$PYTHONPATH:.
 # 여러 모델을 동시에 띄울 경우 메모리 사용량에 주의하세요.
 
 if [ "$1" == "gen" ]; then
-    echo "[*] [생성 모드] Starting Diffusion Worker (FLUX.1-schnell 4-bit) on Port 8003..."
-    $PYTHON_BIN -m src.workers.diffusion_worker --alias image-gen --model_path mlx-community/FLUX.1-schnell-4bit-mlx --port 8003 > diffusion_worker.log 2>&1 &
-    echo "[+] FLUX Worker is starting. Check diffusion_worker.log for status."
+    echo "[*] [생성 모드] Starting Diffusion Worker (FLUX.2-Klein-4B 4-bit) on Port 8003..."
+    $PYTHON_BIN -m src.workers.diffusion_worker --alias image-gen --model_path themindstudio/flux2-klein-4b-mlx-4bit --port 8003 > diffusion_worker.log 2>&1 &
+    echo "[+] FLUX.2 Worker is starting. Check diffusion_worker.log for status."
 else
-    echo "[*] [분석 모드] Starting VLM Worker (Qwen3-VL-4B) on Port 8001..."
-    $PYTHON_BIN -m src.workers.vlm_worker --alias vlm-fast --model_path mlx-community/Qwen3-VL-4B-Instruct-4bit --port 8001 > vlm_worker.log 2>&1 &
+    echo "[*] [분석 모드] Starting VLM Worker (Qwen3.5-4B) on Port 8001..."
+    $PYTHON_BIN -m src.workers.vlm_worker --alias vlm-fast --model_path mlx-community/Qwen3.5-4B-MLX-4bit --port 8001 > vlm_worker.log 2>&1 &
     echo "[+] VLM Worker is starting. Check vlm_worker.log for status."
 fi
 

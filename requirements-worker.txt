@@ -1,6 +1,6 @@
 # Worker Dependencies (Apple Silicon Host)
 # Includes MLX acceleration libraries
-# Updated: 2026-03 for Qwen3-VL / FLUX / Gemma 3
+# Updated: 2026-03 for Qwen3.5 / FLUX.2 / Gemma 3
 
 # Core
 fastapi>=0.115.0
@@ -13,11 +13,11 @@ Pillow>=10.4.0
 # MLX Framework (Apple Silicon)
 mlx>=0.24.0
 
-# Vision Language Models (Qwen3-VL, Gemma 3)
+# Vision Language Models (Qwen3.5, Gemma 3)
 mlx-vlm>=0.4.0
 
-# Image Generation (FLUX via mflux)
-mflux>=0.16.0
+# Image Generation (FLUX.2 via mflux)
+mflux>=0.16.9
 
 # Hugging Face
 huggingface-hub>=0.28.0
