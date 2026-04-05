@@ -14,6 +14,21 @@ import os
 from PIL import Image
 from src.workers.base import BaseWorker, get_base_args
 
+# Workaround: fcntl.flock() fails on some macOS filesystem configurations.
+# Patch filelock to fall back gracefully instead of crashing.
+try:
+    import filelock._unix
+    _original_flock_acquire = filelock._unix.UnixFileLock._acquire
+    def _safe_flock_acquire(self):
+        try:
+            _original_flock_acquire(self)
+        except OSError:
+            fd = os.open(str(self.lock_file), os.O_RDWR | os.O_CREAT | os.O_TRUNC)
+            self._context.lock_file_fd = fd
+    filelock._unix.UnixFileLock._acquire = _safe_flock_acquire
+except Exception:
+    pass
+
 # Import mflux (0.15+ API)
 try:
     from mflux.models.flux.variants.txt2img.flux import Flux1
@@ -50,16 +65,22 @@ class DiffusionWorker(BaseWorker):
         try:
             print(f"[*] Loading FLUX model: {self.model_path}...")
 
-            # Determine model type and quantization from config
-            model_type = "schnell" if "schnell" in self.model_path.lower() else "dev"
-            num_bits = 4 if "4bit" in self.model_path.lower() else None
+            # Determine model type and quantization from model path
+            path_lower = self.model_path.lower()
+            if "flux2-klein-4b" in path_lower or "flux2-klein" in path_lower:
+                model_type = "flux2-klein-4b"
+            elif "flux2-klein-9b" in path_lower:
+                model_type = "flux2-klein-9b"
+            elif "schnell" in path_lower:
+                model_type = "schnell"
+            else:
+                model_type = "dev"
+            num_bits = 4 if "4bit" in path_lower else None
 
-            # Create model config for the base model type
+            # Create model config via mflux registry
             model_config = ModelConfig.from_name(model_name=model_type)
 
-            # Initialize Flux1 with quantization
-            # mflux will automatically download and quantize the model
-            print(f"[*] Initializing FLUX.1-{model_type} with {num_bits or 'no'}-bit quantization...")
+            print(f"[*] Initializing {model_type} with {num_bits or 'no'}-bit quantization...")
             self.flux = Flux1(
                 model_config=model_config,
                 quantize=num_bits,
