@@ -86,6 +86,40 @@ async def api_key_auth_middleware(request: Request, call_next):
     return await call_next(request)
 
 
+async def _get_worker_or_fail(alias: str):
+    """Get worker with friendly cold-start error handling."""
+    try:
+        return await supervisor.get_worker(alias)
+    except MemoryError as e:
+        raise HTTPException(
+            status_code=507,
+            detail={
+                "error": "insufficient_memory",
+                "message": str(e),
+                "hint": "Evict unused models via POST /v1/system/evict/{alias}",
+                "loaded_models": list(supervisor.workers.keys()),
+            },
+        )
+    except RuntimeError as e:
+        raise HTTPException(
+            status_code=503,
+            detail={
+                "error": "service_unavailable",
+                "message": str(e),
+                "hint": "Worker Manager may not be running. Check: curl http://localhost:8100/health",
+            },
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=503,
+            detail={
+                "error": "worker_startup_failed",
+                "message": f"Model loading failed: {e}",
+                "hint": "Model may still be downloading or loading. Retry in 30-60 seconds.",
+            },
+        )
+
+
 class ChatCompletionRequest(BaseModel):
     model: str
     messages: List[Dict[str, Any]]
@@ -152,7 +186,7 @@ async def chat_completions(request: ChatCompletionRequest):
                 detail=f"Model '{model_name}' not found. Available: {list(config.models.keys())}",
             )
 
-    worker = await supervisor.get_worker(model_name)
+    worker = await _get_worker_or_fail(model_name)
 
     # Check if address is UDS or HTTP
     if worker.address.startswith("http"):
@@ -197,7 +231,7 @@ async def generate_images(request: ImageGenerationRequest):
     if model_alias not in config.models:
         raise HTTPException(status_code=404, detail="Diffusion model not configured")
 
-    worker = await supervisor.get_worker(model_alias)
+    worker = await _get_worker_or_fail(model_alias)
 
     if worker.address.startswith("http"):
         transport = httpx.AsyncHTTPTransport()
@@ -219,7 +253,7 @@ async def generate_images(request: ImageGenerationRequest):
                     "seed": request.seed,
                     "guidance": request.guidance,
                 },
-                timeout=300.0,  # 5 min timeout for image gen
+                timeout=600.0,  # 10 min timeout for cold start + image gen
             )
             return resp.json()
         except Exception as e:
@@ -250,7 +284,7 @@ async def edit_images(request: ImageEditRequest):
     if model_alias not in config.models:
         raise HTTPException(status_code=404, detail="Diffusion model not configured")
 
-    worker = await supervisor.get_worker(model_alias)
+    worker = await _get_worker_or_fail(model_alias)
 
     if worker.address.startswith("http"):
         transport = httpx.AsyncHTTPTransport()
@@ -273,7 +307,7 @@ async def edit_images(request: ImageEditRequest):
                     "seed": request.seed,
                     "guidance": request.guidance,
                 },
-                timeout=300.0,
+                timeout=600.0,  # 10 min timeout for cold start + image edit
             )
             return resp.json()
         except Exception as e:
@@ -309,7 +343,7 @@ async def analyze_image(request: VisionAnalyzeRequest):
     if model_alias not in config.models:
         model_alias = "vlm-fast" if "vlm-fast" in config.models else list(config.models.keys())[0]
 
-    worker = await supervisor.get_worker(model_alias)
+    worker = await _get_worker_or_fail(model_alias)
 
     if worker.address.startswith("http"):
         transport = httpx.AsyncHTTPTransport()
@@ -372,11 +406,51 @@ async def system_status():
     - workers: Currently loaded workers with memory usage
     - memory: System memory status
     - config: Memory configuration
+    - models: Per-model loading state
     """
     try:
-        return await supervisor.get_status()
-    except Exception as e:
-        raise HTTPException(status_code=503, detail=str(e))
+        manager_status = await supervisor.get_status()
+    except Exception:
+        manager_status = {"workers": {}, "memory": {}}
+
+    # Add model availability info
+    loaded = set(manager_status.get("workers", {}).keys())
+    models_status = {}
+    for alias, model_cfg in config.models.items():
+        if model_cfg.backend != "mlx":
+            continue
+        models_status[alias] = {
+            "path": model_cfg.path,
+            "status": "loaded" if alias in loaded else "unloaded",
+            "memory_gb": model_cfg.params.get("memory_gb", 0),
+        }
+
+    return {
+        **manager_status,
+        "models": models_status,
+    }
+
+
+@app.post("/v1/system/warm/{alias}")
+async def warm_model(alias: str):
+    """Trigger model loading in background without waiting. Returns immediately."""
+    if alias not in config.models:
+        raise HTTPException(status_code=404, detail=f"Unknown model: {alias}")
+
+    async def _warm():
+        try:
+            await supervisor.get_worker(alias)
+        except Exception as e:
+            logger.warning("Warm-up failed for %s: %s", alias, e)
+
+    asyncio.create_task(_warm())
+    return {
+        "status": "warming",
+        "alias": alias,
+        "model": config.models[alias].path,
+        "estimated_seconds": 30,
+        "hint": "Check GET /v1/system/status to see when ready",
+    }
 
 
 @app.post("/v1/system/evict/{alias}")
