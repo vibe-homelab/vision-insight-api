@@ -115,8 +115,12 @@ class DiffusionWorker(BaseWorker):
                 width, height = 1024, 1024
 
             if self.flux is None:
-                print("[!] FLUX model not loaded, returning mock image")
-                return self._mock_gen(prompt)
+                return {
+                    "error": "Model not loaded. mflux may not be installed or model download failed.",
+                    "detail": IMPORT_ERROR or "Unknown load failure",
+                    "hint": "Check worker logs or run: pip install mflux>=0.16.9",
+                    "status_code": 503,
+                }
 
             print(f"[*] Generating image: {prompt[:50]}... ({width}x{height}, steps={steps})")
             start_time = time.time()
@@ -172,8 +176,12 @@ class DiffusionWorker(BaseWorker):
             guidance = request.get("guidance", 3.5)
 
             if self.flux is None:
-                print("[!] FLUX model not loaded, returning mock image")
-                return self._mock_gen(prompt)
+                return {
+                    "error": "Model not loaded. mflux may not be installed or model download failed.",
+                    "detail": IMPORT_ERROR or "Unknown load failure",
+                    "hint": "Check worker logs or run: pip install mflux>=0.16.9",
+                    "status_code": 503,
+                }
 
             if not image_b64:
                 return {"error": "image field is required for img2img"}
