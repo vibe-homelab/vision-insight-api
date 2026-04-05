@@ -39,14 +39,15 @@ models:
       max_tokens: 2048
       memory_gb: 7.0
 
-  # Image Generation (MLX FLUX.2)
+  # Image Generation (MLX FLUX.1-schnell, cached locally)
+  # TODO: Upgrade to FLUX.2-klein-4b once base model is downloaded
   image-gen:
     type: "diffusion"
-    path: "themindstudio/flux2-klein-4b-mlx-4bit"
+    path: "mlx-community/FLUX.1-schnell-4bit-mlx"
     hot_reload: false
     backend: "mlx"
     params:
-      default_model: "flux2-klein-4b"
+      default_model: "schnell"
       quantize: 4
       memory_gb: 4.6
 
