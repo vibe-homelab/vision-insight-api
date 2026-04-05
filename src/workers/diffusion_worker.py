@@ -126,7 +126,8 @@ class DiffusionWorker(BaseWorker):
             prompt = request.get("prompt", "")
             size = request.get("size", "1024x1024")
             steps = request.get("steps") or 4  # default 4 steps for schnell
-            seed = request.get("seed", int(time.time()))
+            seed = request.get("seed") or int(time.time())
+            seed = int(seed)
             guidance = request.get("guidance", 3.5)
 
             # Parse size
@@ -193,7 +194,8 @@ class DiffusionWorker(BaseWorker):
             image_b64 = request.get("image", "")
             strength = request.get("strength", 0.7)
             steps = request.get("steps") or 4  # default 4 steps for schnell
-            seed = request.get("seed", int(time.time()))
+            seed = request.get("seed") or int(time.time())
+            seed = int(seed)
             guidance = request.get("guidance", 3.5)
 
             if self.flux is None:
