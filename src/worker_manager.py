@@ -194,8 +194,9 @@ class WorkerManager:
             self.workers[alias] = worker
 
             # Wait for worker to be ready
-            print(f"[*] Waiting for {alias} to be ready...")
-            for i in range(60):  # 60 seconds timeout
+            startup_timeout = config.workers.startup_timeout or 300
+            print(f"[*] Waiting for {alias} to be ready (timeout: {startup_timeout}s)...")
+            for i in range(startup_timeout):
                 if await self._is_worker_healthy(port):
                     print(f"[+] {alias} is ready (took {i+1}s)")
                     return worker
